@@ -28,8 +28,32 @@ def load_data():
 
 adoptions, cleanings = load_data()
 
-# Title
-st.title("🌊 Adopt-a-Drain Program Dashboard")
+# Add filters in sidebar
+st.sidebar.header("Filters")
+
+# Year filter
+years = ['All'] + sorted(cleanings['Cleaning Date'].dt.year.unique().tolist(), reverse=True)
+selected_year = st.sidebar.selectbox("Select Year", years)
+
+# Filter data based on year if selected
+if selected_year != 'All':
+    cleanings = cleanings[cleanings['Cleaning Date'].dt.year == selected_year]
+    adoptions = adoptions[adoptions['Adoption Date'].dt.year == selected_year]
+
+# Watershed filter
+watersheds = ['All'] + sorted(cleanings['Watershed'].unique().tolist())
+selected_watershed = st.sidebar.selectbox("Watershed", watersheds)
+
+# Filter data based on watershed if selected
+if selected_watershed != 'All':
+    cleanings = cleanings[cleanings['Watershed'] == selected_watershed]
+    adoptions = adoptions[adoptions['Watershed'] == selected_watershed]
+
+# Title with year if selected
+if selected_year != 'All':
+    st.title(f"🌊 Adopt-a-Drain Program Dashboard ({selected_year})")
+else:
+    st.title("🌊 Adopt-a-Drain Program Dashboard")
 
 # Key Metrics Row
 col1, col2, col3, col4 = st.columns(4)
@@ -95,19 +119,6 @@ top_volunteers = cleanings.groupby('User Display Name').agg({
 top_volunteers.columns = ['Number of Cleanings', 'Total Debris Collected (lbs)']
 top_volunteers = top_volunteers.sort_values('Total Debris Collected (lbs)', ascending=False).head(10)
 st.dataframe(top_volunteers, use_container_width=True)
-
-# Add filters in sidebar
-st.sidebar.header("Filters")
-
-# Date range filter
-date_range = st.sidebar.date_input(
-    "Date Range",
-    [cleanings['Cleaning Date'].min(), cleanings['Cleaning Date'].max()]
-)
-
-# Watershed filter
-watersheds = ['All'] + sorted(cleanings['Watershed'].unique().tolist())
-selected_watershed = st.sidebar.selectbox("Watershed", watersheds)
 
 # Footer
 st.markdown("---")
