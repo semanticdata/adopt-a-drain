@@ -130,6 +130,32 @@ top_volunteers = top_volunteers.sort_values(
 ).head(10)
 st.dataframe(top_volunteers, use_container_width=True)
 
+# Create a complete list of years
+all_years = sorted(
+    set(adoptions["Adoption Date"].dt.year.unique()).union(
+        set(cleanings["Cleaning Date"].dt.year.unique())
+    )
+)
+
+# Create the yearly summary DataFrame
+yearly_summary = pd.DataFrame(
+    {
+        "Year": all_years,
+        "Adoptions": [
+            adoptions[adoptions["Adoption Date"].dt.year == year].shape[0]
+            for year in all_years
+        ],
+        "Cleanings": [
+            cleanings[cleanings["Cleaning Date"].dt.year == year].shape[0]
+            for year in all_years
+        ],
+    }
+).set_index("Year")
+
+# Display the yearly summary table
+st.subheader("Yearly Adoptions and Cleanings Summary")
+st.dataframe(yearly_summary, use_container_width=True)
+
 # Footer
 st.markdown("---")
 st.markdown(
