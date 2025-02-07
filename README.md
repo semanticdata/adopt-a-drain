@@ -9,7 +9,7 @@ A dashboard for the Adopt-a-Drain program in Crystal, Minnesota.
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/semanticdata/traffic-studies.git
+git clone https://github.com/semanticdata/adopt-a-drain.git
 cd adopt-a-drain
 ```
 
