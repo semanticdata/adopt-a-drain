@@ -2,8 +2,6 @@
 
 A dashboard for the Adopt-a-Drain program in Crystal, Minnesota.
 
-## Installation
-
 ## 🚀 Usage
 
 1. Clone the repository:
