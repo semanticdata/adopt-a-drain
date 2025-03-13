@@ -3,30 +3,66 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
+# import psutil
+
 # Page config
 st.set_page_config(page_title="Adopt-a-Drain Dashboard", page_icon="🌊", layout="wide")
 
 
 # Load and prepare data
-@st.cache_data
+@st.cache_data(ttl=3600)  # Cache for 1 hour
 def load_data():
-    # Read CSVs
-    adoptions = pd.read_csv("adoptions.csv")
-    cleanings = pd.read_csv("cleanings.csv")
+    try:
+        # Print current working directory
+        import os
 
-    # Convert dates
-    adoptions["Adoption Date"] = pd.to_datetime(adoptions["Adoption Date"])
-    cleanings["Cleaning Date"] = pd.to_datetime(cleanings["Cleaning Date"])
+        # st.sidebar.write(f"Current working directory: {os.getcwd()}")
 
-    # Convert collected amount to numeric, replacing empty strings with 0
-    cleanings["Collected Amount"] = pd.to_numeric(
-        cleanings["Collected Amount"].replace("", "0")
-    )
+        # Read CSVs with error handling
+        try:
+            adoptions = pd.read_csv("adoptions.csv")
+            # st.sidebar.write("Successfully loaded adoptions.csv")
+        except Exception as e:
+            st.sidebar.error(f"Error loading adoptions.csv: {str(e)}")
+            raise
 
-    return adoptions, cleanings
+        try:
+            cleanings = pd.read_csv("cleanings.csv")
+            # st.sidebar.write("Successfully loaded cleanings.csv")
+        except Exception as e:
+            st.sidebar.error(f"Error loading cleanings.csv: {str(e)}")
+            raise
+
+        # Convert dates
+        adoptions["Adoption Date"] = pd.to_datetime(adoptions["Adoption Date"])
+        cleanings["Cleaning Date"] = pd.to_datetime(cleanings["Cleaning Date"])
+
+        # Convert collected amount to numeric, replacing empty strings with 0
+        cleanings["Collected Amount"] = pd.to_numeric(
+            cleanings["Collected Amount"].replace("", "0")
+        )
+
+        # Verify data loaded correctly
+        # st.sidebar.write(f"Adoptions columns: {adoptions.columns.tolist()}")
+        # st.sidebar.write(f"Cleanings columns: {cleanings.columns.tolist()}")
+
+        return adoptions, cleanings
+    except Exception as e:
+        st.sidebar.error(f"Error in load_data: {str(e)}")
+        raise
 
 
-adoptions, cleanings = load_data()
+try:
+    adoptions, cleanings = load_data()
+except Exception as e:
+    st.error(f"Error loading data: {str(e)}")
+    st.stop()
+
+# Add after the load_data() call
+# st.sidebar.write("Debug Info:")
+# st.sidebar.write(f"Number of adoptions: {len(adoptions)}")
+# st.sidebar.write(f"Number of cleanings: {len(cleanings)}")
+# st.sidebar.write(f"Available watersheds: {cleanings['Watershed'].unique()}")
 
 # Add filters in sidebar
 st.sidebar.header("Filters")
@@ -77,11 +113,17 @@ with col4:
 # Two column layout for charts
 col1, col2 = st.columns(2)
 
+
+@st.cache_data
+def get_monthly_cleanings(cleanings_df):
+    return cleanings_df.set_index("Cleaning Date").resample("ME").size()
+
+
 with col1:
     # st.subheader("Cleanings Over Time")
 
     # Monthly cleaning counts - using 'ME' instead of deprecated 'M'
-    monthly_cleanings = cleanings.set_index("Cleaning Date").resample("ME").size()
+    monthly_cleanings = get_monthly_cleanings(cleanings)
 
     fig = px.line(
         monthly_cleanings,
@@ -106,55 +148,87 @@ with col2:
 # Watershed Analysis
 st.subheader("Watershed Activity")
 
-watershed_stats = (
-    cleanings.groupby("Watershed")
-    .agg({"ID": "count", "Collected Amount": "sum"})
-    .round(1)
-)
+try:
+    watershed_stats = (
+        cleanings.groupby("Watershed")
+        .agg({"ID": "count", "Collected Amount": "sum"})
+        .round(1)
+    )
 
-watershed_stats.columns = ["Number of Cleanings", "Total Debris Collected (lbs)"]
-st.dataframe(watershed_stats, use_container_width=True)
+    if watershed_stats.empty:
+        st.warning("No watershed data available for the selected filters.")
+    else:
+        watershed_stats.columns = [
+            "Number of Cleanings",
+            "Total Debris Collected (lbs)",
+        ]
+        st.dataframe(watershed_stats, use_container_width=True)
+except Exception as e:
+    st.error(f"Error processing watershed data: {str(e)}")
 
 # Top Volunteers
 st.subheader("Top Volunteers")
 
-top_volunteers = (
-    cleanings.groupby("User Display Name")
-    .agg({"ID": "count", "Collected Amount": "sum"})
-    .round(1)
-)
+try:
+    if cleanings.empty:
+        st.warning("No cleaning data available for the selected filters.")
+    else:
+        top_volunteers = (
+            cleanings.groupby("User Display Name")
+            .agg({"ID": "count", "Collected Amount": "sum"})
+            .round(1)
+        )
 
-top_volunteers.columns = ["Number of Cleanings", "Total Debris Collected (lbs)"]
-top_volunteers = top_volunteers.sort_values(
-    "Total Debris Collected (lbs)", ascending=False
-).head(10)
-st.dataframe(top_volunteers, use_container_width=True)
+        top_volunteers.columns = ["Number of Cleanings", "Total Debris Collected (lbs)"]
+        top_volunteers = top_volunteers.sort_values(
+            "Total Debris Collected (lbs)", ascending=False
+        ).head(10)
+        st.dataframe(top_volunteers, use_container_width=True)
+except Exception as e:
+    st.error(f"Error processing volunteer data: {str(e)}")
 
-# Create a complete list of years
-all_years = sorted(
-    set(adoptions["Adoption Date"].dt.year.unique()).union(
-        set(cleanings["Cleaning Date"].dt.year.unique())
+
+@st.cache_data
+def calculate_yearly_summary(adoptions_df, cleanings_df):
+    # Get unique years from both dataframes
+    all_years = sorted(
+        pd.concat(
+            [
+                adoptions_df["Adoption Date"].dt.year,
+                cleanings_df["Cleaning Date"].dt.year,
+            ]
+        ).unique()
     )
-)
 
-# Create the yearly summary DataFrame
-yearly_summary = pd.DataFrame(
-    {
-        "Year": all_years,
-        "Adoptions": [
-            adoptions[adoptions["Adoption Date"].dt.year == year].shape[0]
-            for year in all_years
-        ],
-        "Cleanings": [
-            cleanings[cleanings["Cleaning Date"].dt.year == year].shape[0]
-            for year in all_years
-        ],
-    }
-).set_index("Year")
+    yearly_summary = pd.DataFrame(
+        {
+            "Year": all_years,
+            "Adoptions": adoptions_df["Adoption Date"]
+            .dt.year.value_counts()
+            .reindex(all_years, fill_value=0),
+            "Cleanings": cleanings_df["Cleaning Date"]
+            .dt.year.value_counts()
+            .reindex(all_years, fill_value=0),
+        }
+    ).set_index("Year")
 
-# Display the yearly summary table
+    return yearly_summary
+
+
+# Yearly Summary
 st.subheader("Yearly Adoptions and Cleanings Summary")
-st.dataframe(yearly_summary, use_container_width=True)
+
+try:
+    if adoptions.empty or cleanings.empty:
+        st.warning("No data available for the selected filters.")
+    else:
+        yearly_summary = calculate_yearly_summary(adoptions, cleanings)
+        if yearly_summary.empty:
+            st.warning("No yearly summary data available for the selected filters.")
+        else:
+            st.dataframe(yearly_summary, use_container_width=True)
+except Exception as e:
+    st.error(f"Error processing yearly summary: {str(e)}")
 
 # Footer
 st.markdown("---")
