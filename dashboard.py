@@ -121,65 +121,45 @@ with col2:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-# Primary Debris Distribution
-try:
-    if cleanings.empty:
-        st.warning("No cleaning data available for the selected filters.")
-    else:
-        debris_counts = cleanings["Primary Debris"].value_counts()
+# Two column layout for additional charts
+col3, col4 = st.columns(2)
 
-        fig = px.pie(
-            values=debris_counts.values,
-            names=debris_counts.index,
-            title="Primary Debris Distribution",
-        )
-        st.plotly_chart(fig, use_container_width=True)
-except Exception as e:
-    st.error(f"Error processing debris data: {str(e)}")
 
-# Map for cleaning locations
-st.subheader("Cleaning Locations Map")
+@st.cache_data
+def get_monthly_collected_amount(cleanings_df: pd.DataFrame) -> pd.Series:
+    return (
+        cleanings_df.set_index("Cleaning Date")["Collected Amount"].resample("ME").sum()
+    )
 
-try:
-    if cleanings.empty:
-        st.warning("No cleaning data available for the selected filters.")
-    else:
-        fig = px.scatter_map(
-            cleanings,
-            lat="Latitude",
-            lon="Longitude",
-            hover_name="User Display Name",
-            hover_data=["Cleaning Date", "Collected Amount"],
-            color_discrete_sequence=["fuchsia"],
-            zoom=12,
-            height=550,
-        )
-        fig.update_layout(mapbox_style="open-street-map")
-        fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-        st.plotly_chart(fig, use_container_width=True)
-except Exception as e:
-    st.error(f"Error processing map data: {str(e)}")
 
-# Top Volunteers
-st.subheader("Top Volunteers")
+with col3:
+    # Monthly collected amount
+    monthly_collected_amount = get_monthly_collected_amount(cleanings)
 
-try:
-    if cleanings.empty:
-        st.warning("No cleaning data available for the selected filters.")
-    else:
-        top_volunteers = (
-            cleanings.groupby("User Display Name")
-            .agg({"ID": "count", "Collected Amount": "sum"})
-            .round(1)
-        )
+    fig = px.line(
+        monthly_collected_amount,
+        title="Monthly Collected Amount",
+        labels={"value": "Collected Amount (lbs)", "Cleaning Date": "Date"},
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-        top_volunteers.columns = ["Number of Cleanings", "Total Debris Collected (lbs)"]
-        top_volunteers = top_volunteers.sort_values(
-            "Total Debris Collected (lbs)", ascending=False
-        ).head(10)
-        st.dataframe(top_volunteers, use_container_width=True)
-except Exception as e:
-    st.error(f"Error processing volunteer data: {str(e)}")
+with col4:
+    # Combined adoption and cleaning trends
+    monthly_cleanings = get_monthly_cleanings(cleanings)
+    monthly_adoptions = get_monthly_adoptions(adoptions)
+
+    combined_df = pd.DataFrame(
+        {"Monthly Cleanings": monthly_cleanings, "Monthly Adoptions": monthly_adoptions}
+    ).reset_index()
+
+    fig = px.line(
+        combined_df,
+        x="index",  # Use the index for the x-axis
+        y=["Monthly Cleanings", "Monthly Adoptions"],
+        title="Adoption and Cleaning Trends",
+        labels={"value": "Count", "index": "Date"},
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 
 @st.cache_data
@@ -211,53 +191,175 @@ def calculate_yearly_summary(
     return yearly_summary
 
 
-# Yearly Summary
-st.subheader("Yearly Adoptions and Cleanings Summary")
+col5, col6 = st.columns(2)
+
+with col5:
+
+    # Yearly Summary
+    try:
+        if adoptions.empty or cleanings.empty:
+            st.warning("No data available for the selected filters.")
+        else:
+            yearly_summary = calculate_yearly_summary(adoptions, cleanings)
+            if yearly_summary.empty:
+                st.warning("No yearly summary data available for the selected filters.")
+            else:
+                # Bar chart for yearly summary
+                fig = px.bar(
+                    yearly_summary.reset_index(),
+                    x="Year",
+                    y=["Adoptions", "Cleanings"],
+                    title="Yearly Adoptions and Cleanings Summary",
+                    barmode="group",
+                    labels={"value": "Count", "Year": "Year"},
+                )
+                st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.error(f"Error processing yearly summary: {str(e)}")
+
+with col6:
+
+    # Yearly Trends
+    try:
+        if adoptions.empty or cleanings.empty:
+            st.warning("No data available for the selected filters.")
+        else:
+            yearly_adoptions = (
+                adoptions.set_index("Adoption Date").resample("YE").size()
+            )
+            yearly_cleanings = (
+                cleanings.set_index("Cleaning Date").resample("YE").size()
+            )
+
+            yearly_trends_df = pd.DataFrame(
+                {
+                    "Yearly Adoptions": yearly_adoptions,
+                    "Yearly Cleanings": yearly_cleanings,
+                }
+            ).reset_index()
+
+            # Yearly bar graph
+            fig_bar = px.bar(
+                yearly_trends_df,
+                x="index",  # Use the index for the x-axis
+                y=["Yearly Adoptions", "Yearly Cleanings"],
+                title="Yearly Adoption and Cleaning Counts",
+                labels={"value": "Count", "index": "Year"},
+                barmode="group",
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
+    except Exception as e:
+        st.error(f"Error processing yearly trends: {str(e)}")
+
+# Primary Debris Distribution
+try:
+    if cleanings.empty:
+        st.warning("No cleaning data available for the selected filters.")
+    else:
+        debris_counts = cleanings["Primary Debris"].value_counts()
+
+        fig = px.pie(
+            values=debris_counts.values,
+            names=debris_counts.index,
+            title="Debris Distribution",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+except Exception as e:
+    st.error(f"Error processing debris data: {str(e)}")
+
+
+# Map for cleaning locations
+st.subheader("Cleaning Locations Map")
 
 try:
-    if adoptions.empty or cleanings.empty:
-        st.warning("No data available for the selected filters.")
+    if cleanings.empty:
+        st.warning("No cleaning data available for the selected filters.")
     else:
-        yearly_summary = calculate_yearly_summary(adoptions, cleanings)
-        if yearly_summary.empty:
-            st.warning("No yearly summary data available for the selected filters.")
-        else:
-            st.dataframe(yearly_summary, use_container_width=True)
+        fig = px.scatter_map(
+            cleanings,
+            lat="Latitude",
+            lon="Longitude",
+            hover_name="User Display Name",
+            hover_data=["Cleaning Date", "Collected Amount"],
+            color_discrete_sequence=["fuchsia"],
+            zoom=12,
+            height=550,
+        )
+        fig.update_layout(mapbox_style="open-street-map")
+        fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+        st.plotly_chart(fig, use_container_width=True)
 except Exception as e:
-    st.error(f"Error processing yearly summary: {str(e)}")
+    st.error(f"Error processing map data: {str(e)}")
+
+# Top Volunteers
+
+try:
+    if cleanings.empty:
+        st.warning("No cleaning data available for the selected filters.")
+    else:
+        top_volunteers = (
+            cleanings.groupby("User Display Name")
+            .agg({"ID": "count", "Collected Amount": "sum"})
+            .round(1)
+        )
+
+        top_volunteers.columns = ["Number of Cleanings", "Total Debris Collected (lbs)"]
+        top_volunteers = top_volunteers.sort_values(
+            "Total Debris Collected (lbs)", ascending=False
+        ).head(10)
+
+        # Bar chart for top volunteers
+        fig = px.bar(
+            top_volunteers.reset_index(),
+            x="User Display Name",
+            y=["Number of Cleanings", "Total Debris Collected (lbs)"],
+            title="Top Volunteers",
+            barmode="group",
+            labels={
+                "value": "Count / Collected Amount (lbs)",
+                "User Display Name": "Volunteer",
+            },
+        )
+        st.plotly_chart(fig, use_container_width=True)
+except Exception as e:
+    st.error(f"Error processing volunteer data: {str(e)}")
+
 
 # Watershed Analysis
-st.subheader("Watershed Activity")
 
 try:
     watershed_stats = (
         cleanings.groupby("Watershed")
         .agg({"ID": "count", "Collected Amount": "sum"})
         .round(1)
+        .reset_index()
     )
 
     if watershed_stats.empty:
         st.warning("No watershed data available for the selected filters.")
     else:
         watershed_stats.columns = [
+            "Watershed",
             "Number of Cleanings",
             "Total Debris Collected (lbs)",
         ]
-        st.dataframe(watershed_stats, use_container_width=True)
+
+        # Combined bar chart for number of cleanings and collected amount by watershed
+        fig = px.bar(
+            watershed_stats,
+            x="Watershed",
+            y=["Number of Cleanings", "Total Debris Collected (lbs)"],
+            title="Watershed Specific Cleaning Activity",
+            barmode="group",
+            labels={
+                "value": "Count / Collected Amount (lbs)",
+                "Watershed": "Watershed",
+            },
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
 except Exception as e:
     st.error(f"Error processing watershed data: {str(e)}")
-
-# Bar chart for collected amount by watershed
-collected_by_watershed = (
-    cleanings.groupby("Watershed")["Collected Amount"].sum().reset_index()
-)
-fig = px.bar(
-    collected_by_watershed,
-    x="Watershed",
-    y="Collected Amount",
-    title="Collected Amount by Watershed",
-)
-st.plotly_chart(fig)
 
 # Footer
 st.markdown("---")
