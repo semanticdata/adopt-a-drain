@@ -91,6 +91,11 @@ def get_monthly_cleanings(cleanings_df):
     return cleanings_df.set_index("Cleaning Date").resample("ME").size()
 
 
+@st.cache_data
+def get_monthly_adoptions(adoptions_df):
+    return adoptions_df.set_index("Adoption Date").resample("ME").size()
+
+
 with col1:
     # Monthly cleaning counts - using 'ME' instead of deprecated 'M'
     monthly_cleanings = get_monthly_cleanings(cleanings)
@@ -103,48 +108,56 @@ with col1:
     st.plotly_chart(fig, use_container_width=True)
 
 with col2:
-    # Count primary debris types
-    debris_counts = cleanings["Primary Debris"].value_counts()
+    # Monthly adoption counts
+    monthly_adoptions = get_monthly_adoptions(adoptions)
 
-    fig = px.pie(
-        values=debris_counts.values,
-        names=debris_counts.index,
-        title="Primary Debris Distribution",
+    fig = px.line(
+        monthly_adoptions,
+        title="Monthly Adoption Activity",
+        labels={"value": "Number of Adoptions", "Adoption Date": "Date"},
     )
     st.plotly_chart(fig, use_container_width=True)
 
-# Bar chart for collected amount by watershed
-collected_by_watershed = (
-    cleanings.groupby("Watershed")["Collected Amount"].sum().reset_index()
-)
-fig = px.bar(
-    collected_by_watershed,
-    x="Watershed",
-    y="Collected Amount",
-    title="Collected Amount by Watershed",
-)
-st.plotly_chart(fig)
-
-# Watershed Analysis
-st.subheader("Watershed Activity")
+# Primary Debris Distribution
+# st.subheader("Primary Debris Distribution")
 
 try:
-    watershed_stats = (
-        cleanings.groupby("Watershed")
-        .agg({"ID": "count", "Collected Amount": "sum"})
-        .round(1)
-    )
-
-    if watershed_stats.empty:
-        st.warning("No watershed data available for the selected filters.")
+    if cleanings.empty:
+        st.warning("No cleaning data available for the selected filters.")
     else:
-        watershed_stats.columns = [
-            "Number of Cleanings",
-            "Total Debris Collected (lbs)",
-        ]
-        st.dataframe(watershed_stats, use_container_width=True)
+        debris_counts = cleanings["Primary Debris"].value_counts()
+
+        fig = px.pie(
+            values=debris_counts.values,
+            names=debris_counts.index,
+            title="Primary Debris Distribution",
+        )
+        st.plotly_chart(fig, use_container_width=True)
 except Exception as e:
-    st.error(f"Error processing watershed data: {str(e)}")
+    st.error(f"Error processing debris data: {str(e)}")
+
+# Map for cleaning locations
+st.subheader("Cleaning Locations Map")
+
+try:
+    if cleanings.empty:
+        st.warning("No cleaning data available for the selected filters.")
+    else:
+        fig = px.scatter_mapbox(
+            cleanings,
+            lat="Latitude",
+            lon="Longitude",
+            hover_name="User Display Name",
+            hover_data=["Cleaning Date", "Collected Amount"],
+            color_discrete_sequence=["fuchsia"],
+            zoom=12,
+            height=550,
+        )
+        fig.update_layout(mapbox_style="open-street-map")
+        fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+        st.plotly_chart(fig, use_container_width=True)
+except Exception as e:
+    st.error(f"Error processing map data: {str(e)}")
 
 # Top Volunteers
 st.subheader("Top Volunteers")
@@ -209,6 +222,39 @@ try:
             st.dataframe(yearly_summary, use_container_width=True)
 except Exception as e:
     st.error(f"Error processing yearly summary: {str(e)}")
+
+# Watershed Analysis
+st.subheader("Watershed Activity")
+
+try:
+    watershed_stats = (
+        cleanings.groupby("Watershed")
+        .agg({"ID": "count", "Collected Amount": "sum"})
+        .round(1)
+    )
+
+    if watershed_stats.empty:
+        st.warning("No watershed data available for the selected filters.")
+    else:
+        watershed_stats.columns = [
+            "Number of Cleanings",
+            "Total Debris Collected (lbs)",
+        ]
+        st.dataframe(watershed_stats, use_container_width=True)
+except Exception as e:
+    st.error(f"Error processing watershed data: {str(e)}")
+
+# Bar chart for collected amount by watershed
+collected_by_watershed = (
+    cleanings.groupby("Watershed")["Collected Amount"].sum().reset_index()
+)
+fig = px.bar(
+    collected_by_watershed,
+    x="Watershed",
+    y="Collected Amount",
+    title="Collected Amount by Watershed",
+)
+st.plotly_chart(fig)
 
 # Footer
 st.markdown("---")
