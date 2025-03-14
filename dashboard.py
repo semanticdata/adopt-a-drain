@@ -76,7 +76,8 @@ with col2:
     st.metric("Total Cleanings", len(cleanings))
 
 with col3:
-    st.metric("Total Collected Amount (lbs)", cleanings["Collected Amount"].sum())
+    total_collected = f"{cleanings["Collected Amount"].sum():,.1f} lbs"
+    st.metric("Total Collected Amount", total_collected)
 
 with col4:
     avg_per_cleaning = f"{cleanings['Collected Amount'].mean():,.1f} lbs"
@@ -143,7 +144,7 @@ try:
     if cleanings.empty:
         st.warning("No cleaning data available for the selected filters.")
     else:
-        fig = px.scatter_mapbox(
+        fig = px.scatter_map(
             cleanings,
             lat="Latitude",
             lon="Longitude",
