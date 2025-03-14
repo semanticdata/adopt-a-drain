@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
+from typing import Tuple
 
 # Page config
 st.set_page_config(page_title="Adopt-a-Drain Dashboard", page_icon="🌊", layout="wide")
@@ -9,7 +10,7 @@ st.set_page_config(page_title="Adopt-a-Drain Dashboard", page_icon="🌊", layou
 
 # Load and prepare data
 @st.cache_data(ttl=3600)  # Cache for 1 hour
-def load_data():
+def load_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     try:
         # Read CSVs with error handling
         adoptions = pd.read_csv("adoptions.csv")
@@ -61,10 +62,11 @@ if selected_watershed != "All":
     adoptions = adoptions[adoptions["Watershed"] == selected_watershed]
 
 # Title with year if selected
-if selected_year != "All":
-    st.title(f"🌊 Adopt-a-Drain Dashboard ({selected_year})")
-else:
-    st.title("🌊 Adopt-a-Drain Dashboard")
+st.title(
+    f"🌊 Adopt-a-Drain Dashboard ({selected_year})"
+    if selected_year != "All"
+    else "🌊 Adopt-a-Drain Dashboard"
+)
 
 # Key Metrics Row
 col1, col2, col3, col4 = st.columns(4)
@@ -76,7 +78,7 @@ with col2:
     st.metric("Total Cleanings", len(cleanings))
 
 with col3:
-    total_collected = f"{cleanings["Collected Amount"].sum():,.1f} lbs"
+    total_collected = f"{cleanings['Collected Amount'].sum():,.1f} lbs"
     st.metric("Total Collected Amount", total_collected)
 
 with col4:
@@ -88,12 +90,12 @@ col1, col2 = st.columns(2)
 
 
 @st.cache_data
-def get_monthly_cleanings(cleanings_df):
+def get_monthly_cleanings(cleanings_df: pd.DataFrame) -> pd.Series:
     return cleanings_df.set_index("Cleaning Date").resample("ME").size()
 
 
 @st.cache_data
-def get_monthly_adoptions(adoptions_df):
+def get_monthly_adoptions(adoptions_df: pd.DataFrame) -> pd.Series:
     return adoptions_df.set_index("Adoption Date").resample("ME").size()
 
 
@@ -120,8 +122,6 @@ with col2:
     st.plotly_chart(fig, use_container_width=True)
 
 # Primary Debris Distribution
-# st.subheader("Primary Debris Distribution")
-
 try:
     if cleanings.empty:
         st.warning("No cleaning data available for the selected filters.")
@@ -183,7 +183,9 @@ except Exception as e:
 
 
 @st.cache_data
-def calculate_yearly_summary(adoptions_df, cleanings_df):
+def calculate_yearly_summary(
+    adoptions_df: pd.DataFrame, cleanings_df: pd.DataFrame
+) -> pd.DataFrame:
     # Get unique years from both dataframes
     all_years = sorted(
         pd.concat(
@@ -260,5 +262,5 @@ st.plotly_chart(fig)
 # Footer
 st.markdown("---")
 st.markdown(
-    "Data from the [Adopt-a-Drain](https://mn.adopt-a-drain.org/) program. Dashboard created with Streamlit."
+    "Data sourced from the [Adopt-a-Drain](https://mn.adopt-a-drain.org/) program for Crystal, Minnesota. Dashboard created with [Streamlit](https://streamlit.io/)."
 )
