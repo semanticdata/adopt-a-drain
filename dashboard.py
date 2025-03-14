@@ -3,8 +3,6 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
-# import psutil
-
 # Page config
 st.set_page_config(page_title="Adopt-a-Drain Dashboard", page_icon="🌊", layout="wide")
 
@@ -13,25 +11,9 @@ st.set_page_config(page_title="Adopt-a-Drain Dashboard", page_icon="🌊", layou
 @st.cache_data(ttl=3600)  # Cache for 1 hour
 def load_data():
     try:
-        # Print current working directory
-        import os
-
-        # st.sidebar.write(f"Current working directory: {os.getcwd()}")
-
         # Read CSVs with error handling
-        try:
-            adoptions = pd.read_csv("adoptions.csv")
-            # st.sidebar.write("Successfully loaded adoptions.csv")
-        except Exception as e:
-            st.sidebar.error(f"Error loading adoptions.csv: {str(e)}")
-            raise
-
-        try:
-            cleanings = pd.read_csv("cleanings.csv")
-            # st.sidebar.write("Successfully loaded cleanings.csv")
-        except Exception as e:
-            st.sidebar.error(f"Error loading cleanings.csv: {str(e)}")
-            raise
+        adoptions = pd.read_csv("adoptions.csv")
+        cleanings = pd.read_csv("cleanings.csv")
 
         # Convert dates
         adoptions["Adoption Date"] = pd.to_datetime(adoptions["Adoption Date"])
@@ -42,29 +24,20 @@ def load_data():
             cleanings["Collected Amount"].replace("", "0")
         )
 
-        # Verify data loaded correctly
-        # st.sidebar.write(f"Adoptions columns: {adoptions.columns.tolist()}")
-        # st.sidebar.write(f"Cleanings columns: {cleanings.columns.tolist()}")
-
         return adoptions, cleanings
     except Exception as e:
         st.sidebar.error(f"Error in load_data: {str(e)}")
         raise
 
 
+# Load data
 try:
     adoptions, cleanings = load_data()
 except Exception as e:
     st.error(f"Error loading data: {str(e)}")
     st.stop()
 
-# Add after the load_data() call
-# st.sidebar.write("Debug Info:")
-# st.sidebar.write(f"Number of adoptions: {len(adoptions)}")
-# st.sidebar.write(f"Number of cleanings: {len(cleanings)}")
-# st.sidebar.write(f"Available watersheds: {cleanings['Watershed'].unique()}")
-
-# Add filters in sidebar
+# Sidebar filters
 st.sidebar.header("Filters")
 
 # Year filter
@@ -103,8 +76,7 @@ with col2:
     st.metric("Total Cleanings", len(cleanings))
 
 with col3:
-    total_collected = f"{cleanings['Collected Amount'].sum():,.1f} lbs"
-    st.metric("Total Debris Collected", total_collected)
+    st.metric("Total Collected Amount (lbs)", cleanings["Collected Amount"].sum())
 
 with col4:
     avg_per_cleaning = f"{cleanings['Collected Amount'].mean():,.1f} lbs"
@@ -120,8 +92,6 @@ def get_monthly_cleanings(cleanings_df):
 
 
 with col1:
-    # st.subheader("Cleanings Over Time")
-
     # Monthly cleaning counts - using 'ME' instead of deprecated 'M'
     monthly_cleanings = get_monthly_cleanings(cleanings)
 
@@ -133,8 +103,6 @@ with col1:
     st.plotly_chart(fig, use_container_width=True)
 
 with col2:
-    # st.subheader("Most Common Debris Types")
-
     # Count primary debris types
     debris_counts = cleanings["Primary Debris"].value_counts()
 
@@ -144,6 +112,18 @@ with col2:
         title="Primary Debris Distribution",
     )
     st.plotly_chart(fig, use_container_width=True)
+
+# Bar chart for collected amount by watershed
+collected_by_watershed = (
+    cleanings.groupby("Watershed")["Collected Amount"].sum().reset_index()
+)
+fig = px.bar(
+    collected_by_watershed,
+    x="Watershed",
+    y="Collected Amount",
+    title="Collected Amount by Watershed",
+)
+st.plotly_chart(fig)
 
 # Watershed Analysis
 st.subheader("Watershed Activity")
