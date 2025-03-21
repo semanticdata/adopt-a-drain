@@ -1,6 +1,6 @@
 # Adopt-a-Drain Dashboard
 
-A dashboard for the Adopt-a-Drain program in Crystal, Minnesota.
+A dashboard for the Adopt-a-Drain program in Crystal, Minnesota, built with Plotly Dash.
 
 ## 🚀 Usage
 
@@ -27,11 +27,14 @@ pip install -r requirements.txt
 4. Run the dashboard:
 
 ```bash
-streamlit run dashboard.py
+python dashboard.py
 ```
+
+The dashboard will be available at <http://127.0.0.1:8050/>
 
 ## 📊 Features
 
+- **Modern UI**: Clean interface built with Dash and Bootstrap components
 - **Filters**: Filter data by year and watershed.
 - **Key Metrics**: Display total adoptions, total cleanings, total collected amount, and average debris per cleaning.
 - **Monthly Trends**: Line charts showing monthly cleaning and adoption activities.
