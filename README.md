@@ -14,20 +14,21 @@ cd adopt-a-drain
 2. Create a virtual environment (optional but recommended):
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows, use: venv\Scripts\activate
+python -m venv .venv
+.venv\Scripts\activate  # On Windows
 ```
 
-3. Install required packages:
+3. Install dependencies using uv:
 
 ```bash
-pip install -r requirements.txt
+pip install uv
+uv pip install .
 ```
 
 4. Run the dashboard:
 
 ```bash
-python dashboard.py
+python main.py
 ```
 
 The dashboard will be available at <http://127.0.0.1:8050/>
