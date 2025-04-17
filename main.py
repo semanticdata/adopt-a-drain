@@ -194,7 +194,6 @@ def calculate_yearly_summary(
 col5, col6 = st.columns(2)
 
 with col5:
-
     # Yearly Summary
     try:
         if adoptions.empty or cleanings.empty:
@@ -218,7 +217,6 @@ with col5:
         st.error(f"Error processing yearly summary: {str(e)}")
 
 with col6:
-
     # Yearly Trends
     try:
         if adoptions.empty or cleanings.empty:
