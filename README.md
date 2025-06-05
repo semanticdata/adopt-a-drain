@@ -6,30 +6,30 @@ A dashboard for the Adopt-a-Drain program in Crystal, Minnesota.
 
 1. Clone the repository:
 
-```bash
-git clone https://github.com/semanticdata/adopt-a-drain.git
-cd adopt-a-drain
-```
+    ```bash
+    git clone https://github.com/semanticdata/adopt-a-drain.git
+    cd adopt-a-drain
+    ```
 
 2. Create a virtual environment (optional but recommended):
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate  # On Windows
-```
+    ```bash
+    python -m venv .venv
+    .venv\Scripts\activate  # On Windows
+    ```
 
 3. Install dependencies using uv:
 
-```bash
-pip install uv
-uv pip install .
-```
+    ```bash
+    pip install uv
+    uv pip install .
+    ```
 
 4. Run the dashboard:
 
-```bash
-streamlit run dashboard.py
-```
+    ```bash
+    streamlit run dashboard.py
+    ```
 
 ## 📊 Features
 
