@@ -1,7 +1,7 @@
 [project]
 name = "adopt-a-drain"
 version = "0.1.0"
-description = "Add your description here"
+description = "A dashboard for the Adopt-a-Drain program in Crystal, Minnesota."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = ["pandas>=2.2.3", "plotly>=6.0.1", "streamlit>=1.44.1"]

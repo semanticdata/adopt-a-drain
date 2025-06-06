@@ -5,8 +5,8 @@ A Streamlit dashboard for visualizing drain adoption and cleaning data from
 the Crystal, Minnesota Adopt-a-Drain program. Provides insights into volunteer
 activity, debris collection trends, and geographic distribution of cleanings.
 
-Author: Crystal Adopt-a-Drain Program
-Created: 2024
+Author: Miguel Pimentel
+License: MIT
 """
 
 from typing import Tuple
